@@ -10,7 +10,7 @@ What is here is the error surface from `dx/14` §7 and the version contract: `Yo
 
 The typed collection API arrives with `libyo.xcframework`, which the release train in `tamnd/yo` builds and which gets pinned here as a binary target once `M1` lands a record plane. Until then `swift build` works, `swift test` passes, and neither one opens a file.
 
-The version is `0.0.0` and it means what it says. This package is published so the name is held and the CI is real before either matters.
+The version is `0.0.1` and it means what it says. This package is published so the name is held and the CI is real before either matters.
 
 ## Requirements
 
@@ -30,7 +30,7 @@ There is no Swift 5 language mode and there will not be one. The `Sendable` anno
 ## Install
 
 ```swift
-.package(url: "https://github.com/tamnd/yo-swift", from: "0.0.0")
+.package(url: "https://github.com/tamnd/yo-swift", from: "0.0.1")
 ```
 
 Then add `Yodb` to your target's dependencies.
