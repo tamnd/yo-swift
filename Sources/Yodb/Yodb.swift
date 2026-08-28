@@ -20,7 +20,7 @@ public enum Yodb {
     /// A binding does not get its own version line, because a user asking
     /// "which Yodb do I need for yo 1.4" is a question the project inflicted on
     /// itself.
-    public static let version = "0.0.0"
+    public static let version = "0.0.1"
 
     /// The C ABI version this package is built against.
     ///
