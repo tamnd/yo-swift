@@ -31,7 +31,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: swift-actions/setup-swift@v2.4.0
+      - uses: swift-actions/setup-swift@v3
         with:
           swift-version: "6.2"
       - name: format
@@ -57,7 +57,7 @@ jobs:
             swift: "6.3"
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: swift-actions/setup-swift@v2.4.0
+      - uses: swift-actions/setup-swift@v3
         with:
           swift-version: ${{ matrix.swift }}
       - name: build
@@ -73,7 +73,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: swift-actions/setup-swift@v2.4.0
+      - uses: swift-actions/setup-swift@v3
         with:
           swift-version: "6.3"
       - name: resolve from scratch
