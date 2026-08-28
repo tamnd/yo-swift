@@ -117,8 +117,16 @@ jobs:
       - uses: maxim-lobanov/setup-xcode@v1.7.0
         with:
           xcode-version: latest-stable
-      - name: toolchain
-        run: xcodebuild -version
+      # The scheme is the package name from Package.swift, not the product name.
+      # SwiftPM generates one implicit scheme per package and calls it after the
+      # package, so `-scheme yodb` fails with a message about a workspace, which
+      # is a confusing way to be told you used the wrong one of two names that
+      # differ only in case. Printed here so the next person does not have to
+      # find that out from a red build.
+      - name: toolchain and schemes
+        run: |
+          xcodebuild -version
+          xcodebuild -list
       # No pipe into a log prettifier here. A pipe hands back the exit code of
       # the last command in it, so a prettifier that succeeds turns a failed
       # build green unless pipefail is set, and that is a bug worth not having
@@ -126,7 +134,7 @@ jobs:
       - name: build for ${{ matrix.destination }}
         run: |
           xcodebuild build \
-            -scheme Yodb \
+            -scheme yodb \
             -destination '${{ matrix.destination }}' \
             -skipPackagePluginValidation \
             -quiet
