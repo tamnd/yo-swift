@@ -1,0 +1,92 @@
+name: release
+
+# SwiftPM has no registry. A Swift release is a git tag that resolves, which
+# means there is no publish step to get wrong and no credential to leak, and it
+# also means a bad tag is permanent in a way a yanked package is not. Everything
+# here runs before the release is created, not after.
+#
+# The engine's release train (dx/12 section 5) triggers this with the version it
+# has already built. Running it by hand is supported and does the same thing.
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+", "v[0-9]+.[0-9]+.[0-9]+-*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The version to release, without the leading v
+        required: true
+        type: string
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  # The tag says one version and Yodb.version says another is the single most
+  # likely way to ship a release that claims to be something it is not. It costs
+  # ten seconds to check and it is unfixable afterwards, because a git tag that
+  # people have already resolved cannot be moved.
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - id: version
+        name: the tag and the source must agree
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tagged="${{ inputs.version }}"
+          else
+            tagged="${GITHUB_REF_NAME#v}"
+          fi
+          declared=$(grep -oE 'version = "[^"]+"' Sources/Yodb/Yodb.swift | head -1 | cut -d'"' -f2)
+          if [ "$tagged" != "$declared" ]; then
+            echo "::error::tag says $tagged, Sources/Yodb/Yodb.swift says $declared"
+            exit 1
+          fi
+          echo "version=$tagged" >> "$GITHUB_OUTPUT"
+      - name: the changelog must mention it
+        run: |
+          set -euo pipefail
+          v="${{ steps.version.outputs.version }}"
+          grep -q "## \[\?$v" CHANGELOG.md || {
+            echo "::error::CHANGELOG.md has no entry for $v"
+            exit 1
+          }
+
+  test:
+    needs: verify
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, macos-15]
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: swift-actions/setup-swift@v2.4.0
+        with:
+          swift-version: "6.2"
+      - run: swift test
+
+  publish:
+    needs: [verify, test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: softprops/action-gh-release@v3.0.2
+        with:
+          name: v${{ needs.verify.outputs.version }}
+          generate_release_notes: true
+          prerelease: ${{ contains(needs.verify.outputs.version, '-') }}
+          # No files. A SwiftPM consumer resolves the tag from source and never
+          # downloads an asset, so an attached tarball would be a second copy
+          # that can disagree with the first.

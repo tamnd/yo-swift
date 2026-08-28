@@ -1,0 +1,12 @@
+.build/
+.swiftpm/
+*.xcodeproj
+*.xcworkspace
+DerivedData/
+.DS_Store
+
+# Package.resolved is not committed for a library.
+# A library that pins its dependency graph forces that graph on every app that
+# depends on it, and the app is the one that should be resolving. Executables
+# commit it, libraries do not.
+Package.resolved

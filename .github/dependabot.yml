@@ -1,0 +1,14 @@
+version: 2
+updates:
+  # Actions only. There are no Swift package dependencies to update, and there
+  # will not be many: every dependency a library takes is a dependency every app
+  # using it also takes, whether that app wanted it or not.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      actions:
+        patterns: ["*"]
