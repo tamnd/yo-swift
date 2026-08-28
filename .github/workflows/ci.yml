@@ -2,13 +2,20 @@ name: ci
 
 # Same rule as the engine's ci.yml: a pull request finds out in under three
 # minutes. A check slower than a context switch is a check people learn to
-# ignore, and the way that failure shows up is not red builds, it is merged
-# branches nobody waited for.
+# ignore, and that failure shows up as branches merged without waiting rather
+# than as red builds.
 #
-# The matrix is small on purpose. Swift on macOS and Swift on Linux are the two
-# platforms where the compiler itself differs; tvOS, watchOS and visionOS share
-# the macOS toolchain and only differ at link time, which the release workflow
-# covers when it builds the xcframework.
+# Linux runs in the official Swift images rather than through a setup action.
+# The first version of this file used swift-actions/setup-swift and it failed on
+# the first push, because the action carries its own list of available versions
+# and that list did not have 6.3 in it yet. A toolchain the vendor publishes as
+# a container is a toolchain that is correct on the day it ships, with nothing
+# in between to go stale.
+#
+# macOS cannot work that way, so it selects an Xcode instead. That is where the
+# other first-push failure came from: the runner's default Xcode was too old to
+# parse a swift-tools-version 6.2 manifest, and xcodebuild reported it as a
+# dependency resolution failure on a package that has no dependencies.
 
 on:
   push:
@@ -28,54 +35,64 @@ jobs:
   # seconds instead of after the whole matrix.
   style:
     runs-on: ubuntu-latest
+    container: swift:6.3
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: swift-actions/setup-swift@v2.4.0
-        with:
-          swift-version: "6.2"
       - name: format
         run: swift format lint --strict --recursive Sources Tests Package.swift
 
-  test:
-    name: test (${{ matrix.os }}, swift ${{ matrix.swift }})
-    runs-on: ${{ matrix.os }}
+  linux:
+    name: linux (swift ${{ matrix.swift }})
+    runs-on: ubuntu-latest
+    container: swift:${{ matrix.swift }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # The floor. If this breaks, the floor moved and Package.swift is
-          # lying about it.
-          - os: ubuntu-latest
-            swift: "6.2"
-          # Current. This is where a deprecation warning shows up first.
-          - os: ubuntu-latest
-            swift: "6.3"
-          # macOS carries the Apple SDKs and is the platform most users are on.
-          - os: macos-15
-            swift: "6.3"
+        # 6.2 is the floor declared in Package.swift. If this job breaks then
+        # the floor moved and the manifest is lying about it.
+        # 6.3 is current, and it is where a new deprecation warning lands first.
+        swift: ["6.2", "6.3"]
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: swift-actions/setup-swift@v2.4.0
-        with:
-          swift-version: ${{ matrix.swift }}
+      - run: swift --version
       - name: build
         run: swift build --build-tests -Xswiftc -warnings-as-errors
       - name: test
         run: swift test --skip-build
 
-  # A package that resolves for us and not for a consumer is the failure mode
-  # this job exists to catch. It builds from a clean clone with no cache and no
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: maxim-lobanov/setup-xcode@v1.7.0
+        with:
+          xcode-version: latest-stable
+      # Printed before anything is built, because both of the first-push
+      # failures in this file were toolchain version problems reported as
+      # something else entirely.
+      - name: toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: build
+        run: swift build --build-tests -Xswiftc -warnings-as-errors
+      - name: test
+        run: swift test --skip-build
+
+  # A package that resolves for us and not for a consumer is the failure this
+  # job exists to catch. It builds from a clean clone with no cache and no
   # Package.resolved, which is what a user who types `swift package add` gets.
   consume:
     runs-on: macos-15
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: swift-actions/setup-swift@v2.4.0
+      - uses: maxim-lobanov/setup-xcode@v1.7.0
         with:
-          swift-version: "6.3"
+          xcode-version: latest-stable
       - name: resolve from scratch
         run: |
           rm -f Package.resolved
@@ -86,7 +103,7 @@ jobs:
   # availability annotation that is wrong for watchOS before a user does.
   platforms:
     runs-on: macos-15
-    timeout-minutes: 25
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -97,6 +114,11 @@ jobs:
           - "generic/platform=visionOS"
     steps:
       - uses: actions/checkout@v7.0.1
+      - uses: maxim-lobanov/setup-xcode@v1.7.0
+        with:
+          xcode-version: latest-stable
+      - name: toolchain
+        run: xcodebuild -version
       # No pipe into a log prettifier here. A pipe hands back the exit code of
       # the last command in it, so a prettifier that succeeds turns a failed
       # build green unless pipefail is set, and that is a bug worth not having
