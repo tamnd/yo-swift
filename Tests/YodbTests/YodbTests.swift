@@ -112,3 +112,40 @@ struct YodbTests {
         #expect(parts.allSatisfy { UInt($0) != nil })
     }
 }
+
+@Suite("the placeholder")
+struct PlaceholderTests {
+    /// The sentence, spelled out here rather than built from `Yodb.version`.
+    ///
+    /// A test that assembles the string the same way the code does passes
+    /// whatever the code assembles, which is no test at all. This is the one
+    /// place the wording is written by hand, and it is the same wording
+    /// `reserve.py` generates for the other seven ecosystems, so if either side
+    /// is edited alone this fails.
+    static let sentence =
+        "yo is not usable yet. This is a reserved placeholder at 0.0.2; "
+        + "see https://github.com/tamnd/yo"
+
+    @Test("open throws, and says the same thing every other binding says")
+    func openThrowsTheSharedSentence() {
+        #expect(throws: YoError.self) { try Yodb.open("x.yo") }
+        do {
+            try Yodb.open("x.yo")
+        } catch let error as YoError {
+            #expect(error.code == .unsupported)
+            #expect(error.message == Self.sentence)
+            #expect(error.position == "x.yo")
+            #expect(!error.retryable)
+            // What a user actually sees when they print it. The install matrix
+            // greps for the sentence in the rendered output, not in the field.
+            #expect(error.description.contains(Self.sentence))
+        } catch {
+            Issue.record("threw \(type(of: error)) rather than YoError")
+        }
+    }
+
+    @Test("the sentence names the version of the package it ships in")
+    func sentenceNamesItsOwnVersion() {
+        #expect(Self.sentence.contains("at \(Yodb.version);"))
+    }
+}

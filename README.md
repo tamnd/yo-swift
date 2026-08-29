@@ -8,9 +8,11 @@ Early, and honest about it. There is no database in this package yet.
 
 What is here is the error surface from `dx/14` §7 and the version contract: `YoError` with all five fields that cross the C ABI, `YoCode` with the code table, and the constants that pin this package to an engine version. Those are the parts that do not need an engine to exist, and everything else is built on top of them.
 
+There is also `Yodb.open`, which throws. Every yo placeholder in every ecosystem carries one symbol that fails with the same sentence, and until 0.0.2 this package was the only one without it: it resolved, it imported, and there was nothing in it a caller could reach.
+
 The typed collection API arrives with `libyo.xcframework`, which the release train in `tamnd/yo` builds and which gets pinned here as a binary target once `M1` lands a record plane. Until then `swift build` works, `swift test` passes, and neither one opens a file.
 
-The version is `0.0.1` and it means what it says. This package is published so the name is held and the CI is real before either matters.
+The version is `0.0.2` and it means what it says. This package is published so the name is held and the CI is real before either matters.
 
 ## Requirements
 
@@ -30,7 +32,7 @@ There is no Swift 5 language mode and there will not be one. The `Sendable` anno
 ## Install
 
 ```swift
-.package(url: "https://github.com/tamnd/yo-swift", from: "0.0.1")
+.package(url: "https://github.com/tamnd/yo-swift", from: "0.0.2")
 ```
 
 Then add `Yodb` to your target's dependencies.

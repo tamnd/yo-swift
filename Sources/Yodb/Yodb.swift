@@ -20,7 +20,7 @@ public enum Yodb {
     /// A binding does not get its own version line, because a user asking
     /// "which Yodb do I need for yo 1.4" is a question the project inflicted on
     /// itself.
-    public static let version = "0.0.1"
+    public static let version = "0.0.2"
 
     /// The C ABI version this package is built against.
     ///
@@ -43,5 +43,34 @@ public enum Yodb {
         documentationHost
             .appending(path: "errors")
             .appending(path: code.slug)
+    }
+
+    /// Opens a database, once there is one to open.
+    ///
+    /// Every yo placeholder in every ecosystem carries one symbol that fails
+    /// with the same sentence, so a user who hits it in two languages does not
+    /// have to work out whether they are looking at two different problems.
+    /// This is Swift's, and until 2026-08-29 it was the only binding that did
+    /// not have one: the package resolved, imported, and had nothing in it a
+    /// caller could reach. That was invisible for as long as SwiftPM was the
+    /// only way in, and it stopped being invisible when the same sources went
+    /// to CocoaPods as a published pod.
+    ///
+    /// It returns `Never` because it never returns. The signature changes when
+    /// M1 lands a record plane and there is a handle to hand back. The version
+    /// is `0.0.x` and a minor may break the API before 1.0, which is what that
+    /// allowance is for.
+    public static func open(_ path: String) throws -> Never {
+        throw YoError(
+            code: .unsupported,
+            // Built from `version` rather than written out, because the one
+            // useful thing in this sentence is the number and a literal copy of
+            // it goes stale the first time the placeholder is republished. Six
+            // ecosystems shipped a sentence naming 0.0.0 from a 0.0.1 artifact
+            // before this was true of them either.
+            message: "yo is not usable yet. This is a reserved placeholder at "
+                + "\(version); see https://github.com/tamnd/yo",
+            position: path
+        )
     }
 }
